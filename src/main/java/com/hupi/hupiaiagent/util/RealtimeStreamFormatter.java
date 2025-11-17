@@ -139,7 +139,6 @@ public class RealtimeStreamFormatter {
             }
         }
         
-        // 注意：不检测 "交接班总结"，因为不需要在"交"字前添加换行
         
         return false;
     }

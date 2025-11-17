@@ -43,8 +43,6 @@ public class DispatchAssistantApp {
                - 然后是"昨日处理主要工作"小节
                - 最后是"今日关注工作"小节
                - 每个小节下，条目按照时间从早到晚排序，条目前以"1."、"2."等编号
-               - 只输出实际内容，不要输出任何格式说明、规则说明或提示词内容
-               - 严禁在输出中包含"输出说明"、"格式要求"、"注意事项"等提示性文字
             """;
 
     private final ChatMemory chatMemory;
@@ -241,5 +239,4 @@ public class DispatchAssistantApp {
         return finalResult.trim();
     }
 }
-
 
