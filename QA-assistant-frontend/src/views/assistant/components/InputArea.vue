@@ -1,71 +1,116 @@
 <template>
-    <div class="input-area">
-      <div class="input-wrapper">
-        <div class="input-container">
-          <n-input
-            v-model:value="inputText"
-            type="textarea"
-            size="large"
-            placeholder="发消息、输入@选择技能或/选择文件"
-            :autosize="{ minRows: 1, maxRows: 5 }"
-            class="chat-input"
-            @keyup.enter.exact="send"
-            @keyup.ctrl.enter="send"
-          />
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <n-tooltip trigger="hover">
-                <template #trigger>
-                  <n-button text><n-icon size="20"><AttachOutline /></n-icon></n-button>
-                </template>
-                添加附件
-              </n-tooltip>
-              <n-space align="center">
-                <n-switch size="small" />
-                <span>深度思考</span>
-              </n-space>
-            </div>
-            <div class="toolbar-right">
-              <n-tooltip trigger="hover">
-                <template #trigger>
-                  <n-button text><n-icon size="20"><ScissorOutlined /></n-icon></n-button>
-                </template>
-                截图
-              </n-tooltip>
-              <n-tooltip trigger="hover">
-                <template #trigger>
-                  <n-button text><n-icon size="20"><MicOutline /></n-icon></n-button>
-                </template>
-                语音输入
-              </n-tooltip>
-            </div>
+  <div class="input-area">
+    <div class="input-wrapper">
+      <div class="input-container">
+        <n-input
+          v-model:value="inputText"
+          type="textarea"
+          size="large"
+          :placeholder="isRecording ? '正在聆听中...' : '发消息、输入@选择技能或/选择文件'"
+          :autosize="{ minRows: 1, maxRows: 5 }"
+          class="chat-input"
+          @keyup.enter.exact="send"
+          @keyup.ctrl.enter="send"
+        />
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button text><n-icon size="20"><AttachOutline /></n-icon></n-button>
+              </template>
+              添加附件
+            </n-tooltip>
+            <n-space align="center">
+              <n-switch size="small" />
+              <span>深度思考</span>
+            </n-space>
           </div>
+          <div class="toolbar-right">
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button text><n-icon size="20"><ScissorOutlined /></n-icon></n-button>
+              </template>
+              截图
+            </n-tooltip>
+            
+            <n-tooltip trigger="hover">
+              <template #trigger>
+                <n-button text @click="handleMicClick">
+                  <n-icon size="20" :color="isRecording ? '#ff4d4f' : undefined">
+                    <MicOutline />
+                  </n-icon>
+                </n-button>
+              </template>
+              {{ isRecording ? '点击停止录音' : '语音输入' }}
+            </n-tooltip>
+            </div>
         </div>
-        <n-button type="primary" size="large" class="send-button" @click="send">
-          发送
-          <template #icon>
-            <n-icon><SendOutline /></n-icon>
-          </template>
-        </n-button>
       </div>
+      <n-button type="primary" size="large" class="send-button" @click="send">
+        发送
+        <template #icon>
+          <n-icon><SendOutline /></n-icon>
+        </template>
+      </n-button>
     </div>
-  </template>
-  
-  <script setup lang="ts">
-  import { ref } from 'vue';
-  import { MicOutline, AttachOutline, SendOutline } from '@vicons/ionicons5';
-  import { ScissorOutlined } from '@vicons/antd';
-  
-  const emit = defineEmits<{ (e: 'send', text: string): void }>();
-  const inputText = ref('');
+  </div>
+</template>
 
-  function send() {
-    const text = inputText.value.trim();
-    if (!text) return;
-    emit('send', text);
-    inputText.value = '';
+<script setup lang="ts">
+import { ref, watch } from 'vue'; // 引入 watch
+import { MicOutline, AttachOutline, SendOutline } from '@vicons/ionicons5';
+import { ScissorOutlined } from '@vicons/antd';
+import { useFunASR } from '@/hooks/useFunASR'; // 引入刚才创建的 Hook
+
+const emit = defineEmits<{ (e: 'send', text: string): void }>();
+const inputText = ref('');
+
+// 使用 FunASR Hook
+const { isRecording, resultText, startRecording, stopRecording } = useFunASR();
+
+// 处理麦克风点击
+function handleMicClick() {
+  if (isRecording.value) {
+    stopRecording();
+  } else {
+    startRecording();
   }
-  </script>
+}
+
+// 监听识别结果，追加到输入框
+// 注意：FunASR 返回的是整句更新，不是增量字符，所以这里需要一点技巧
+// 简单的策略是：当在录音时，用识别结果替换当前输入框的最后一部分，或者直接覆盖
+// 这里演示最简单的逻辑：如果正在录音，直接把识别结果显示在输入框
+// 进阶逻辑：记录录音前的文本 + 识别文本
+let textBeforeRecord = '';
+
+watch(isRecording, (newVal) => {
+  if (newVal) {
+    // 开始录音时，记录当前已有的文本
+    textBeforeRecord = inputText.value;
+  } else {
+    // 停止录音时，识别结果已经合并进去了，无需操作
+  }
+});
+
+watch(resultText, (newText) => {
+  if (isRecording.value) {
+    // 实时更新输入框：原始内容 + 正在识别的内容
+    inputText.value = textBeforeRecord + (textBeforeRecord ? ' ' : '') + newText;
+  }
+});
+
+function send() {
+  const text = inputText.value.trim();
+  if (!text) return;
+  // 发送前如果正在录音，先停止
+  if (isRecording.value) {
+      stopRecording();
+  }
+  emit('send', text);
+  inputText.value = '';
+}
+</script>
   
   <style lang="less" scoped>
   .input-area {

@@ -65,6 +65,9 @@ importers:
       qs:
         specifier: ^6.14.0
         version: 6.14.0
+      recorder-core:
+        specifier: ^1.3.25011100
+        version: 1.3.25011100
       vue:
         specifier: ^3.5.21
         version: 3.5.22(typescript@4.9.5)
@@ -3372,6 +3375,9 @@ packages:
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
+
+  recorder-core@1.3.25011100:
+    resolution: {integrity: sha512-trXsCH0zurhoizT4Z22C0OsM0SDOW+2OvtgRxeLQFwxoFeqFjDjYZsbZEZUiKMJLhBvamI4K7Ic+qZ2LBo74TA==}
 
   redent@3.0.0:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
@@ -7645,6 +7651,8 @@ snapshots:
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.1
+
+  recorder-core@1.3.25011100: {}
 
   redent@3.0.0:
     dependencies:
