@@ -19,7 +19,32 @@
       </n-layout-sider>
 
       <n-layout class="chat-main">
+        <!-- 设置按钮 -->
+        <div class="chat-header">
+          <div class="header-title">AI 助手</div>
+          <div class="header-actions">
+            <n-button
+              quaternary
+              circle
+              size="small"
+              @click="showSettings = !showSettings"
+              title="语音设置"
+            >
+              <template #icon>
+                <n-icon><SettingOutlined /></n-icon>
+              </template>
+            </n-button>
+          </div>
+        </div>
+
         <div class="chat-content">
+          <!-- TTS设置面板 -->
+          <n-collapse-transition :show="showSettings">
+            <div class="settings-panel">
+              <TTSSettings @config-change="onTTSConfigChange" />
+            </div>
+          </n-collapse-transition>
+
           <ChatWindow :messages="messages" :show-thinking="!isViewingHistory" />
           <InputArea @send="handleSend" />
         </div>
@@ -30,27 +55,39 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { NButton, NIcon, NCollapseTransition } from 'naive-ui';
+import { SettingOutlined } from '@vicons/antd';
 import HistoryPanel from './components/HistoryPanel.vue';
 import ChatWindow from './components/ChatWindow.vue';
 import InputArea from './components/InputArea.vue';
+import TTSSettings from '@/components/TTSSettings/TTSSettings.vue';
 import { sendMessageStream, checkApiConfig, generateChatId } from '@/api/assistant/chat';
-import { formatStreamChunk, createFormatContext } from '@/utils/streamFormatter';
-import { 
-  getAllChatMetadata, 
-  saveChatMetadata, 
-  removeChatMetadata, 
+import { createFormatContext } from '@/utils/streamFormatter';
+import {
+  getAllChatMetadata,
+  saveChatMetadata,
+  removeChatMetadata,
   syncChatHistoryList,
-  type ChatMetadata 
+  type ChatMetadata
 } from '@/api/assistant/history';
+import type { TTSConfig } from '@/hooks/useTTS';
 
 // 当前会话ID
 const currentChatId = ref(generateChatId());
 
 // 对话消息（初始化时为空数组，不再是硬编码的演示消息）
-const messages = ref<Array<{id: number, role: 'user' | 'assistant', text: string, thinkingContent?: string, thinkingTime?: number, isTyping?: boolean, displayText?: string}>>([]);
+const messages = ref<Array<{id: number, role: 'user' | 'assistant', text: string, thinkingContent?: string, thinkingTime?: number, isTyping?: boolean, displayText?: string, timestamp?: number, audioUrl?: string, autoPlayTTS?: boolean, generatingTTS?: boolean}>>([]);
 
 // 是否在查看历史对话
 const isViewingHistory = ref(false);
+
+// TTS设置面板显示状态
+const showSettings = ref(false);
+
+// TTS配置变化处理
+function onTTSConfigChange(config: TTSConfig) {
+  console.log('TTS配置已更新:', config);
+}
 
 // 仅历史对话使用：清理消息中的 think/思考 内容，保留最终答案
 function sanitizeAssistantHistoryContent(content: string): string {
@@ -194,10 +231,11 @@ async function handleSend(text: string) {
   }
   
   // 添加用户消息
-  const userMessage = { 
-    id: Date.now(), 
-    role: 'user' as const, 
-    text 
+  const userMessage = {
+    id: Date.now(),
+    role: 'user' as const,
+    text,
+    timestamp: Date.now()
   };
   messages.value.push(userMessage);
   
@@ -216,7 +254,8 @@ async function handleSend(text: string) {
     thinkingContent: '',
     thinkingTime: 0,
     isTyping: true,
-    displayText: ''
+    displayText: '',
+    timestamp: Date.now()
   };
   messages.value.push(assistantMessage);
   
@@ -307,9 +346,36 @@ async function handleSend(text: string) {
   flex-direction: column; 
   background: #ffffff; 
 }
-.chat-content { 
-  display: flex; 
-  flex-direction: column; 
-  height: 100%; 
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: linear-gradient(90deg, #f8fbff 0%, #e6f7ff 100%);
+  border-bottom: 1px solid #e6f7ff;
+
+  .header-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333333;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 60px);
+  overflow: hidden;
+}
+
+.settings-panel {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 16px 20px;
 }
 </style>

@@ -52,17 +52,44 @@
           </div>
           
           <div class="message-bubble" :class="`bubble-${msg.role}`">
-            <div 
-              v-if="msg.role === 'assistant' && msg.isTyping" 
+            <div
+              v-if="msg.role === 'assistant' && msg.isTyping"
               class="typing-content"
               v-html="renderMarkdown(msg.displayText || '')"
             ></div>
-            <div 
-              v-else 
+            <div
+              v-else
               class="message-text"
               v-html="renderMarkdown(msg.text)"
               @click="handleTextClick"
             ></div>
+          </div>
+
+          <!-- TTS音频播放器 - 仅显示在助手消息中 -->
+          <div v-if="msg.role === 'assistant' && !msg.isTyping" class="tts-section">
+            <AudioPlayer
+              v-if="msg.audioUrl"
+              :audio-url="msg.audioUrl"
+              :title="`语音回复 - ${new Date(msg.timestamp).toLocaleTimeString()}`"
+              :download-url="msg.audioUrl"
+              :auto-play="msg.autoPlayTTS"
+            />
+
+            <!-- TTS控制按钮 -->
+            <div v-else class="tts-controls">
+              <button
+                class="tts-button"
+                :disabled="msg.generatingTTS"
+                @click="generateTTS(msg)"
+                title="生成语音"
+              >
+                <n-icon size="16">
+                  <LoadingOutlined v-if="msg.generatingTTS" />
+                  <SoundOutlined v-else />
+                </n-icon>
+                <span>{{ msg.generatingTTS ? '生成中...' : '播放语音' }}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -74,19 +101,25 @@
 </template>
 
 <script setup lang="ts">
-import { onUpdated, ref, nextTick, watch } from 'vue';
-import { ClockCircleOutlined, RobotOutlined, DownOutlined, UpOutlined } from '@vicons/antd';
+import { onUpdated, ref, nextTick, watch, onMounted } from 'vue';
+import { ClockCircleOutlined, RobotOutlined, DownOutlined, UpOutlined, SoundOutlined, LoadingOutlined } from '@vicons/antd';
 import ChartModal from './ChartModal.vue';
+import AudioPlayer from '@/components/AudioPlayer/AudioPlayer.vue';
+import { useTTS } from '@/hooks/useTTS';
 import { renderMarkdown } from '@/utils/markdown';
 
-interface Msg { 
-  id: number; 
-  role: 'user' | 'assistant'; 
+interface Msg {
+  id: number;
+  role: 'user' | 'assistant';
   text: string;
   thinkingContent?: string; // 思考过程内容
   displayText?: string;
   isTyping?: boolean;
   thinkingTime?: number;
+  timestamp?: number; // 时间戳
+  audioUrl?: string; // TTS音频URL
+  autoPlayTTS?: boolean; // 是否自动播放TTS
+  generatingTTS?: boolean; // 是否正在生成TTS
 }
 
 const props = defineProps<{ messages: any, showThinking?: boolean }>();
@@ -94,6 +127,9 @@ const props = defineProps<{ messages: any, showThinking?: boolean }>();
 const chatWindowRef = ref();
 const messageListRef = ref();
 const chartModalRef = ref();
+
+// TTS功能
+const { generateSpeech, init: initTTS } = useTTS();
 
 // 思考过程展开状态管理 (默认折叠)
 const expandedThinking = ref<Record<number, boolean>>({});
@@ -106,6 +142,42 @@ function toggleThinking(messageId: number) {
 // 检查是否有思考内容
 function hasThinkingContent(msg: Msg): boolean {
   return !!(msg.role === 'assistant' && msg.thinkingContent && msg.thinkingContent.trim().length > 0);
+}
+
+// 生成TTS语音
+async function generateTTS(message: Msg) {
+  // 检查TTS是否启用（从localStorage读取）
+  const savedConfig = localStorage.getItem('tts-config');
+  if (savedConfig) {
+    try {
+      const config = JSON.parse(savedConfig);
+      if (!config.enabled) {
+        console.warn('TTS is disabled');
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to parse TTS config:', e);
+    }
+  }
+
+  // 设置生成状态
+  message.generatingTTS = true;
+
+  try {
+    // 生成语音
+    const result = await generateSpeech(message.text);
+
+    if (result.success && result.filePath) {
+      // 更新消息的音频URL
+      message.audioUrl = `/api/tts/download?filePath=${encodeURIComponent(result.filePath)}`;
+      message.autoPlayTTS = true; // 自动播放
+    }
+  } catch (error) {
+    console.error('Failed to generate TTS:', error);
+  } finally {
+    // 清除生成状态
+    message.generatingTTS = false;
+  }
 }
 
 
@@ -184,6 +256,11 @@ function handleTextClick(event: MouseEvent) {
 
 onUpdated(() => {
   scrollToBottom();
+});
+
+// 组件挂载时初始化TTS
+onMounted(() => {
+  initTTS();
 });
 </script>
 
@@ -524,6 +601,50 @@ onUpdated(() => {
   :deep(li) {
     margin: 2px 0;
     font-style: italic;
+  }
+}
+
+// TTS相关样式
+.tts-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tts-controls {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.tts-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  background: #f8f9fa;
+  color: #666666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+
+  &:hover:not(:disabled) {
+    background: #e9ecef;
+    border-color: #66c2ff;
+    color: #0066cc;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .n-icon {
+    display: flex;
+    align-items: center;
   }
 }
 </style>
