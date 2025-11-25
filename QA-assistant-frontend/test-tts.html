@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS功能快速测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            border-left: 4px solid #007acc;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .mode-indicator {
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .mock-mode {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 TTS语音合成功能测试</h1>
+        <p>这个页面可以测试前端TTS模块是否正常工作，支持Mock模式。</p>
+
+        <div class="mode-indicator mock-mode" id="modeIndicator">
+            当前模式: Mock模式 (无需后端服务)
+        </div>
+
+        <div class="test-section">
+            <h3>📝 文本输入</h3>
+            <textarea id="textInput" placeholder="请输入要转换为语音的文本...">
+你好，这是一个TTS语音合成测试。Hello, this is a TTS speech synthesis test.
+            </textarea>
+
+            <h4>选择参数:</h4>
+            <label>语言: </label>
+            <select id="languageSelect">
+                <option value="chinese">中文</option>
+                <option value="english">英文</option>
+                <option value="japanese">日文</option>
+                <option value="korean">韩文</option>
+                <option value="cantonese">粤语</option>
+            </select>
+
+            <label>音色: </label>
+            <select id="voiceSelect">
+                <option value="longwan">龙婉</option>
+                <option value="xiaoqing">晓晴</option>
+                <option value="xiaomeng">晓梦</option>
+                <option value="xiaoxue">晓雪</option>
+                <option value="xiaoyun">晓云</option>
+            </select>
+
+            <label>格式: </label>
+            <select id="formatSelect">
+                <option value="mp3">MP3</option>
+                <option value="wav">WAV</option>
+                <option value="ogg">OGG</option>
+            </select>
+        </div>
+
+        <div class="test-section">
+            <h3>🎵 语音合成测试</h3>
+            <button id="testFileMode">📁 测试文件模式</button>
+            <button id="testStreamMode">🌊 测试流模式</button>
+            <button id="testGetVoices">🎭 获取音色列表</button>
+            <button id="testServiceStatus">🔍 检查服务状态</button>
+
+            <div id="testResult"></div>
+
+            <div id="audioContainer" style="display: none;">
+                <h4>🔊 音频播放器</h4>
+                <audio id="audioPlayer" controls></audio>
+                <br>
+                <button id="downloadAudio">💾 下载音频</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 测试说明</h3>
+            <ul>
+                <li><strong>文件模式</strong>: 生成音频文件并返回下载链接</li>
+                <li><strong>流模式</strong>: 直接返回音频流数据</li>
+                <li><strong>获取音色</strong>: 获取支持的音色列表</li>
+                <li><strong>服务状态</strong>: 检查TTS服务运行状态</li>
+            </ul>
+            <p><em>注意：当前使用Mock模式，无需真实的后端服务即可测试所有功能。</em></p>
+        </div>
+    </div>
+
+    <script>
+        // 模拟TTS API
+        class MockTTSService {
+            constructor() {
+                this.mockMode = true;
+                this.baseURL = '/api/tts';
+            }
+
+            async generateSpeechFile(text, voice, language, format) {
+                // 模拟网络延迟
+                await this.delay(1000);
+
+                if (!text || text.trim().length === 0) {
+                    throw new Error('文本内容不能为空');
+                }
+
+                if (text.length > 5000) {
+                    throw new Error('文本内容过长，请控制在5000字符以内');
+                }
+
+                const timestamp = Date.now();
+                const filename = `tts_${voice}_${timestamp}.mp3`;
+                const filePath = `/tmp/tts/${filename}`;
+
+                return {
+                    success: true,
+                    filePath: filePath,
+                    message: '语音生成成功 (Mock模式)'
+                };
+            }
+
+            async generateSpeechStream(text, voice, language, format) {
+                await this.delay(800);
+
+                if (!text || text.trim().length === 0) {
+                    throw new Error('文本内容不能为空');
+                }
+
+                // 返回模拟的base64音频数据 (非常短的静音MP3)
+                const mockAudioBase64 = 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAEaAAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAQKAAAAAAAADrABXFU3AAAAAAgAA0AAAAgAA0AAAAgAA0AAAAgAA0AAAQAAAAgAA0AAAAgAA0AAAAgAA0AAAQAA';
+
+                const audioBytes = Uint8Array.from(atob(mockAudioBase64), c => c.charCodeAt(0));
+                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                return URL.createObjectURL(blob);
+            }
+
+            async getVoices() {
+                await this.delay(300);
+
+                return {
+                    success: true,
+                    data: {
+                        chinese: ['longwan', 'xiaoqing', 'xiaomeng', 'xiaoxue', 'xiaoyun'],
+                        english: ['anna', 'brian', 'cathy', 'david', 'emily'],
+                        japanese: ['haruka', 'hikari', 'kaori', 'mai', 'nana'],
+                        korean: ['jihoon', 'sujin', 'yuna', 'minjun', 'hyejin'],
+                        cantonese: ['xiaomin', 'xiaofen', 'xiaoya', 'xiaoying', 'xiaomei']
+                    },
+                    message: '获取音色成功 (Mock模式)'
+                };
+            }
+
+            async checkStatus() {
+                await this.delay(200);
+
+                return {
+                    success: true,
+                    data: {
+                        status: 'running',
+                        version: '1.0.0',
+                        supportedFormats: ['mp3', 'wav', 'ogg'],
+                        maxTextLength: 5000
+                    },
+                    message: 'TTS服务运行正常 (Mock模式)'
+                };
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // 初始化
+        const ttsService = new MockTTSService();
+        let currentAudioUrl = null;
+
+        // DOM元素
+        const textInput = document.getElementById('textInput');
+        const languageSelect = document.getElementById('languageSelect');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const formatSelect = document.getElementById('formatSelect');
+        const testResult = document.getElementById('testResult');
+        const audioContainer = document.getElementById('audioContainer');
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        // 显示结果
+        function showResult(message, isSuccess = true) {
+            testResult.innerHTML = `
+                <div class="result ${isSuccess ? 'success' : 'error'}">
+                    <strong>${isSuccess ? '✅ 成功' : '❌ 错误'}:</strong> ${message}
+                </div>
+            `;
+        }
+
+        // 显示加载状态
+        function showLoading(button) {
+            const originalText = button.textContent;
+            button.textContent = '⏳ 处理中...';
+            button.disabled = true;
+
+            return () => {
+                button.textContent = originalText;
+                button.disabled = false;
+            };
+        }
+
+        // 更新音色选项
+        function updateVoiceOptions() {
+            const language = languageSelect.value;
+            const voices = {
+                chinese: ['longwan', 'xiaoqing', 'xiaomeng', 'xiaoxue', 'xiaoyun'],
+                english: ['anna', 'brian', 'cathy', 'david', 'emily'],
+                japanese: ['haruka', 'hikari', 'kaori', 'mai', 'nana'],
+                korean: ['jihoon', 'sujin', 'yuna', 'minjun', 'hyejin'],
+                cantonese: ['xiaomin', 'xiaofen', 'xiaoya', 'xiaoying', 'xiaomei']
+            };
+
+            const labels = {
+                chinese: ['龙婉', '晓晴', '晓梦', '晓雪', '晓云'],
+                english: ['Anna', 'Brian', 'Cathy', 'David', 'Emily'],
+                japanese: ['春香', '光', '香织', '舞', '奈奈'],
+                korean: ['智勋', '秀珍', '允娜', '民俊', '惠珍'],
+                cantonese: ['小敏', '小芬', '小雅', '小莹', '小美']
+            };
+
+            voiceSelect.innerHTML = '';
+            const voiceList = voices[language] || [];
+            const labelList = labels[language] || [];
+
+            voiceList.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = voice;
+                option.textContent = labelList[index] || voice;
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        // 测试文件模式
+        document.getElementById('testFileMode').addEventListener('click', async function() {
+            const restoreButton = showLoading(this);
+
+            try {
+                const result = await ttsService.generateSpeechFile(
+                    textInput.value,
+                    voiceSelect.value,
+                    languageSelect.value,
+                    formatSelect.value
+                );
+
+                if (result.success) {
+                    // 模拟音频URL
+                    currentAudioUrl = await ttsService.generateSpeechStream(
+                        textInput.value,
+                        voiceSelect.value,
+                        languageSelect.value,
+                        formatSelect.value
+                    );
+
+                    audioPlayer.src = currentAudioUrl;
+                    audioContainer.style.display = 'block';
+
+                    showResult(`文件生成成功！文件路径: ${result.filePath}`);
+                }
+            } catch (error) {
+                showResult(error.message, false);
+            } finally {
+                restoreButton();
+            }
+        });
+
+        // 测试流模式
+        document.getElementById('testStreamMode').addEventListener('click', async function() {
+            const restoreButton = showLoading(this);
+
+            try {
+                currentAudioUrl = await ttsService.generateSpeechStream(
+                    textInput.value,
+                    voiceSelect.value,
+                    languageSelect.value,
+                    formatSelect.value
+                );
+
+                audioPlayer.src = currentAudioUrl;
+                audioContainer.style.display = 'block';
+
+                showResult('流模式生成成功！音频已加载到播放器。');
+            } catch (error) {
+                showResult(error.message, false);
+            } finally {
+                restoreButton();
+            }
+        });
+
+        // 测试获取音色
+        document.getElementById('testGetVoices').addEventListener('click', async function() {
+            const restoreButton = showLoading(this);
+
+            try {
+                const result = await ttsService.getVoices();
+
+                if (result.success) {
+                    const voicesInfo = Object.entries(result.data)
+                        .map(([lang, voices]) => `${lang}: ${voices.join(', ')}`)
+                        .join('\n');
+
+                    showResult(`音色列表获取成功！\n\n${voicesInfo}`);
+                }
+            } catch (error) {
+                showResult(error.message, false);
+            } finally {
+                restoreButton();
+            }
+        });
+
+        // 测试服务状态
+        document.getElementById('testServiceStatus').addEventListener('click', async function() {
+            const restoreButton = showLoading(this);
+
+            try {
+                const result = await ttsService.checkStatus();
+
+                if (result.success) {
+                    const statusInfo = `
+                        状态: ${result.data.status}
+                        版本: ${result.data.version}
+                        支持格式: ${result.data.supportedFormats.join(', ')}
+                        最大文本长度: ${result.data.maxTextLength}字符
+                    `;
+
+                    showResult(`服务状态检查成功！\n\n${statusInfo}`);
+                }
+            } catch (error) {
+                showResult(error.message, false);
+            } finally {
+                restoreButton();
+            }
+        });
+
+        // 下载音频
+        document.getElementById('downloadAudio').addEventListener('click', function() {
+            if (currentAudioUrl) {
+                const link = document.createElement('a');
+                link.href = currentAudioUrl;
+                link.download = `tts-audio-${Date.now()}.mp3`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showResult('音频下载已开始！');
+            }
+        });
+
+        // 监听语言变化
+        languageSelect.addEventListener('change', updateVoiceOptions);
+
+        // 初始化
+        updateVoiceOptions();
+    </script>
+</body>
+</html>

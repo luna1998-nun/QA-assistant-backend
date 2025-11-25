@@ -10,7 +10,26 @@ spring:
 #    password: XXX
   ai:
     dashscope:
-      enabled: false
+      enabled: true
+      # 需要替换为你自己的 key
+      api-key: ${DASHSCOPE_API_KEY:your-dashscope-api-key}
+      audio:
+        speech:
+          enabled: true
+          model: cosyvoice-v1
+          voice:
+            # 默认中文女声
+            name: longwan
+            # 支持的语言：chinese, english, japanese, korean, cantonese
+            language: chinese
+          # 音频格式：mp3, wav, pcm
+          format: mp3
+          # 采样率：16000, 22050, 24000, 44100
+          sample-rate: 24000
+          # 语速：0.5-2.0，1.0为正常语速
+          speed: 1.0
+          # 音量：0.1-1.0
+          volume: 1.0
 #    dashscope:
 #      # 需要替换为你自己的 key
 #      api-key: 阿里云百炼 api-key
