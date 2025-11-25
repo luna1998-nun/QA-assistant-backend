@@ -129,7 +129,7 @@ const messageListRef = ref();
 const chartModalRef = ref();
 
 // TTS功能
-const { generateSpeech, init: initTTS } = useTTS();
+const { generateSpeech, init: initTTS, currentAudioUrl: ttsAudioUrl } = useTTS();
 
 // 思考过程展开状态管理 (默认折叠)
 const expandedThinking = ref<Record<number, boolean>>({});
@@ -167,9 +167,9 @@ async function generateTTS(message: Msg) {
     // 生成语音
     const result = await generateSpeech(message.text);
 
-    if (result.success && result.filePath) {
-      // 更新消息的音频URL
-      message.audioUrl = `/api/tts/download?filePath=${encodeURIComponent(result.filePath)}`;
+    if (result.success && ttsAudioUrl.value) {
+      // 更新消息的音频URL（使用Hook中的URL，支持Mock模式）
+      message.audioUrl = ttsAudioUrl.value;
       message.autoPlayTTS = true; // 自动播放
     }
   } catch (error) {

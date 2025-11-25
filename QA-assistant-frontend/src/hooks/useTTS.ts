@@ -46,6 +46,9 @@ export function useTTS() {
   const ttsEnabled = ref(false)
   const error = ref<string>('')
 
+  // Mock模式开关
+  const mockMode = ref(true) // 默认启用Mock模式
+
   // TTS配置
   const config = ref<TTSConfig>({
     voice: 'longwan',           // 默认中文女声
@@ -120,6 +123,33 @@ export function useTTS() {
       // 合并配置
       const finalConfig = { ...config.value, ...options }
 
+      // Mock模式处理
+      if (mockMode.value) {
+        // 模拟网络延迟
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
+        // 生成模拟文件路径
+        const timestamp = Date.now()
+        const filename = `tts_${finalConfig.voice}_${timestamp}.mp3`
+        const filePath = `/tmp/tts/${filename}`
+
+        // 构建音频URL（使用Mock数据）
+        const mockAudioBase64 = 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAEaAAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAQKAAAAAAAADrABXFU3AAAAAAgAA0AAAAgAA0AAAAgAA0AAAAgAA0AAAQAAAAgAA0AAAAgAA0AAAAgAA0AAAQAA'
+        const audioBlob = new Blob([Uint8Array.from(atob(mockAudioBase64), c => c.charCodeAt(0))], { type: 'audio/mpeg' })
+        const audioUrl = URL.createObjectURL(audioBlob)
+
+        currentAudioUrl.value = audioUrl
+        currentDownloadUrl.value = audioUrl
+
+        message.success('语音生成成功 (Mock模式)')
+        return {
+          success: true,
+          filePath: filePath,
+          message: '语音生成成功 (Mock模式)'
+        }
+      }
+
+      // 实际API调用
       const requestBody = {
         text: text.trim(),
         voice: finalConfig.voice,
@@ -223,6 +253,24 @@ export function useTTS() {
   // 获取支持的音色
   const fetchSupportedVoices = async (): Promise<VoiceInfo | null> => {
     try {
+      // Mock模式处理
+      if (mockMode.value) {
+        // 模拟网络延迟
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // 返回预设的音色数据
+        const voices: VoiceInfo = {
+          chinese: ['longwan', 'xiaoqing', 'xiaomeng', 'xiaoxue', 'xiaoyun'],
+          english: ['anna', 'brian', 'cathy', 'david', 'emily'],
+          japanese: ['haruka', 'hikari', 'kaori', 'mai', 'nana'],
+          korean: ['jihoon', 'sujin', 'yuna', 'minjun', 'hyejin'],
+          cantonese: ['xiaomin', 'xiaofen', 'xiaoya', 'xiaoying', 'xiaomei']
+        }
+        supportedVoices.value = voices
+        message.success('获取音色成功 (Mock模式)')
+        return voices
+      }
+
       const response = await fetch(`${API_BASE_URL}/voices`)
 
       if (!response.ok) {
@@ -243,6 +291,26 @@ export function useTTS() {
   // 检查TTS服务状态
   const checkServiceStatus = async () => {
     try {
+      // Mock模式处理
+      if (mockMode.value) {
+        // 模拟网络延迟
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        const status = {
+          success: true,
+          data: {
+            status: 'running',
+            version: '1.0.0',
+            supportedFormats: ['mp3', 'wav', 'ogg'],
+            maxTextLength: 5000
+          },
+          message: 'TTS服务运行正常 (Mock模式)'
+        }
+        console.log('TTS Service Status:', status)
+        message.success('服务状态检查成功 (Mock模式)')
+        return status
+      }
+
       const response = await fetch(`${API_BASE_URL}/status`)
 
       if (!response.ok) {
@@ -386,6 +454,7 @@ export function useTTS() {
     config,
     supportedVoices,
     currentVoiceLabel,
+    mockMode,
 
     // 方法
     generateSpeech,
