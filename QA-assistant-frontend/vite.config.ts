@@ -69,6 +69,32 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       port: VITE_PORT,
       // proxy: createProxy(VITE_PROXY),
       proxy: {
+        // [修复] 优先拦截 TTS 请求转发给 Python 服务 (8001)
+        // 必须放在 /api/ai 前面，否则会被通用代理拦截
+        '/api/ai/tts': {
+          target: 'http://localhost:8001',
+          changeOrigin: true,
+          // Python脚本里已经写了完整路径 /api/ai/tts/speak，所以这里不需要 rewrite
+        },
+        // AI Assistant 后端接口代理（非 TTS 请求）
+        '/api/ai/dispatch_app/chat': {
+          target: 'http://10.59.51.36:8123/',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => {
+            // 保持 /api 前缀
+            return path;
+          }
+        },
+        '/api/ai/dispatch_app/chat/history': {
+          target: 'http://10.59.51.36:8123/',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => {
+            // 保持 /api 前缀
+            return path;
+          }
+        },
         '/api/v1/po/eqms': {
           target: 'http://127.0.0.1:9000/',
           changeOrigin: true,
@@ -97,16 +123,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
             return path.replace(/^\/ollama/, '/api');
           }
         },
-        // AI Assistant 后端接口代理
-        '/api/ai': {
-          target: 'http://10.59.51.36:8123/',
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => {
-            // 保持 /api 前缀
-            return path;
-          }
-        }
+        // [移除] 通用 /api/ai 代理，避免与 TTS 代理冲突
       },
     },
     optimizeDeps: {

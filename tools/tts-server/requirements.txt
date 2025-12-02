@@ -1,0 +1,12 @@
+# --- API 服务 ---
+fastapi
+uvicorn[standard]
+
+# --- TTS 核心 ---
+# 从 GitHub 安装 MeloTTS (PyPI 上的 0.1.1 版本已损坏)
+git+https://github.com/myshell-ai/MeloTTS.git
+
+# --- 依赖库 ---
+nltk
+
+unidic-lite  # (关键：用于跳过 800MB 的 unidic 完整版下载)

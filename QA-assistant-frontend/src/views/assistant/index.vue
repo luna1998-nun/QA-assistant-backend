@@ -46,8 +46,17 @@ import {
 // 当前会话ID
 const currentChatId = ref(generateChatId());
 
-// 对话消息（初始化时为空数组，不再是硬编码的演示消息）
-const messages = ref<Array<{id: number, role: 'user' | 'assistant', text: string, thinkingContent?: string, thinkingTime?: number, isTyping?: boolean, displayText?: string}>>([]);
+// 对话消息（初始化时添加一条测试消息）
+const messages = ref<Array<{id: number, role: 'user' | 'assistant', text: string, thinkingContent?: string, thinkingTime?: number, isTyping?: boolean, displayText?: string}>>([
+  {
+    id: 1,
+    role: 'assistant',
+    text: '你好！我是 OCEM AI 助手，很高兴为你服务！我可以帮你处理各种问题，包括设备监控、数据分析、故障诊断等。有什么我可以帮助你的吗？\n\n试试点击右上角的朗读按钮，听听我的声音！',
+    thinkingContent: '用户可能第一次使用，需要友好地介绍自己的功能，并引导用户开始对话',
+    thinkingTime: 1250,
+    isTyping: false
+  }
+]);
 
 // 是否在查看历史对话
 const isViewingHistory = ref(false);
