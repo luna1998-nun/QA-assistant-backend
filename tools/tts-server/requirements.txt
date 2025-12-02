@@ -1,57 +1,12 @@
-# TTS 服务器依赖
-# 基础 Web 框架
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+# --- API 服务 ---
+fastapi
+uvicorn[standard]
 
-# TTS 核心引擎
-melotts==0.1.2
+# --- TTS 核心 ---
+# 从 GitHub 安装 MeloTTS (PyPI 上的 0.1.1 版本已损坏)
+git+https://github.com/myshell-ai/MeloTTS.git
 
-# 文本处理和语言支持
-torch>=2.0.0
-torchaudio>=2.0.0
-transformers>=4.30.0
+# --- 依赖库 ---
+nltk
 
-# 自然语言处理
-nltk>=3.8
-jieba>=0.42.1
-inflect>=7.0.0
-cn2an>=0.0.24
-
-# 音频处理
-librosa>=0.9.0
-pydub>=0.25.0
-
-# 日本语文本处理（备用）
-fugashi>=1.2.0
-unidic-lite>=1.0.8
-
-# 英文文本处理
-g2p-en>=2.1.0
-eng-to-ipa>=0.2.0
-
-# 韩语文本处理（备用）
-g2pkk>=0.1.1
-jamo>=0.3.0
-
-# 法语文本处理（备用）
-gruut>=3.2.0
-
-# 数字处理
-num2words>=0.5.0
-
-# 缓存和路径管理
-cached-path>=1.5.0
-
-# 进度条
-tqdm>=4.65.0
-
-# 工具库
-anyascii>=0.3.2
-loguru>=0.7.0
-
-# 网络请求
-requests>=2.28.0
-
-# 配置管理
-pydantic>=2.0.0
-python-dotenv>=1.0.0
+unidic-lite  # (关键：用于跳过 800MB 的 unidic 完整版下载)

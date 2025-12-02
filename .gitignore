@@ -37,6 +37,7 @@ build/
 .vscode/
 
 ### Python ###
+.tts/
 .venv/
 __pycache__/
 *.py[cod]

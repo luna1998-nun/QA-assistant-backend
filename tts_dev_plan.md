@@ -4,7 +4,7 @@
 
 -----
 
-# CLAUDE CODE 开发任务清单：MeloTTS 前端直连集成 (macOS/CPU/Mise)
+# 开发任务清单：MeloTTS 前端直连集成 (macOS/CPU/Mise)
 
 ## 1\. 环境准备 (Python Service)
 
