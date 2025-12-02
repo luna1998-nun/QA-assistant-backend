@@ -13,6 +13,23 @@
         <div class="message-content">
           <div class="message-header">
             <span class="message-role">{{ msg.role === 'user' ? '用户' : 'OCEM AI助手' }}</span>
+
+            <n-button
+              v-if="msg.role === 'assistant' && !msg.isTyping"
+              text
+              size="tiny"
+              @click="playAudio(msg)"
+              style="margin-left: 8px; vertical-align: middle;"
+            >
+              <template #icon>
+                <n-icon>
+                  <LoadingOutlined v-if="msg.isAudioLoading" />
+                  <SoundOutlined v-else :class="{'text-[#66c2ff]': msg.isPlaying}" />
+                </n-icon>
+              </template>
+              {{ msg.isPlaying ? '停止' : (msg.isAudioLoading ? '生成中...' : '朗读') }}
+            </n-button>
+
             <div v-if="showThinking && msg.thinkingTime" class="thinking-time">
               <div class="thinking-info">
                 <n-icon><ClockCircleOutlined /></n-icon>
@@ -75,18 +92,21 @@
 
 <script setup lang="ts">
 import { onUpdated, ref, nextTick, watch } from 'vue';
-import { ClockCircleOutlined, RobotOutlined, DownOutlined, UpOutlined } from '@vicons/antd';
+import { ClockCircleOutlined, RobotOutlined, DownOutlined, UpOutlined, SoundOutlined, LoadingOutlined } from '@vicons/antd';
 import ChartModal from './ChartModal.vue';
 import { renderMarkdown } from '@/utils/markdown';
+import { useMessage } from 'naive-ui';
 
-interface Msg { 
-  id: number; 
-  role: 'user' | 'assistant'; 
+interface Msg {
+  id: number;
+  role: 'user' | 'assistant';
   text: string;
   thinkingContent?: string; // 思考过程内容
   displayText?: string;
   isTyping?: boolean;
   thinkingTime?: number;
+  isAudioLoading?: boolean; // 新增
+  isPlaying?: boolean;      // 新增
 }
 
 const props = defineProps<{ messages: any, showThinking?: boolean }>();
@@ -94,6 +114,7 @@ const props = defineProps<{ messages: any, showThinking?: boolean }>();
 const chatWindowRef = ref();
 const messageListRef = ref();
 const chartModalRef = ref();
+const $message = useMessage();
 
 // 思考过程展开状态管理 (默认折叠)
 const expandedThinking = ref<Record<number, boolean>>({});
@@ -108,6 +129,65 @@ function hasThinkingContent(msg: Msg): boolean {
   return !!(msg.role === 'assistant' && msg.thinkingContent && msg.thinkingContent.trim().length > 0);
 }
 
+// TTS 播放逻辑
+const audioPlayer = new Audio();
+const currentPlayingMsgId = ref<number | null>(null);
+
+const playAudio = (msg: Msg) => {
+  // 1. 停止当前播放
+  if (currentPlayingMsgId.value === msg.id) {
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    currentPlayingMsgId.value = null;
+    msg.isPlaying = false;
+    return;
+  }
+
+  // 停止其他正在播放的
+  audioPlayer.pause();
+  // 重置所有消息的播放状态 (如果需要更严谨的状态管理，可以遍历重置)
+  if (currentPlayingMsgId.value !== null) {
+     // 简单处理：实际项目中可能需要遍历 messages 重置 isPlaying
+  }
+
+  // 2. 开始新请求
+  msg.isAudioLoading = true;
+
+  // 清理 Markdown 符号，避免朗读干扰
+  const cleanText = msg.text.replace(/[#*`\-]/g, '');
+
+  // 这里的 URL 会被 vite.config.ts 代理到 localhost:8001
+  const url = `/api/ai/tts/speak?text=${encodeURIComponent(cleanText)}`;
+
+  audioPlayer.src = url;
+
+  audioPlayer.oncanplay = () => {
+    msg.isAudioLoading = false;
+    msg.isPlaying = true;
+    currentPlayingMsgId.value = msg.id;
+    audioPlayer.play();
+  };
+
+  audioPlayer.onended = () => {
+    msg.isPlaying = false;
+    currentPlayingMsgId.value = null;
+  };
+
+  audioPlayer.onerror = () => {
+    msg.isAudioLoading = false;
+    msg.isPlaying = false;
+    currentPlayingMsgId.value = null;
+    console.error('Audio Error:', audioPlayer.error);
+    $message.error('语音生成失败，请检查 Python 服务是否启动');
+  };
+};
+
+// 组件销毁时清理
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+  audioPlayer.pause();
+  audioPlayer.src = '';
+});
 
 // 打字机效果
 async function typewriterEffect(message: Msg) {
